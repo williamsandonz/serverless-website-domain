@@ -24,7 +24,7 @@ class WebsiteDomainHelper {
     return this.awsProvider.naming.getStackName();
   }
   getRedirectName() {
-    return `${this.getStackName()}-redirect4`;
+    return `${this.getStackName()}-redirect`;
   }
   async getCloudfrontDomainName() {
     return new Promise((resolve, reject) => {
