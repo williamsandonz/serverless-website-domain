@@ -1,0 +1,42 @@
+Type: AWS::CloudFront::Distribution
+Properties:
+  DistributionConfig:
+    Aliases:
+    - ${self:custom.domainComponents.withWWW}
+    - ${self:custom.domainComponents.withoutWWW}
+    CustomErrorResponses:
+      - ErrorCode: 404
+        ResponseCode: 200
+        ResponsePagePath: /index.html
+    DefaultCacheBehavior:
+      AllowedMethods:
+        - DELETE
+        - GET
+        - HEAD
+        - OPTIONS
+        - PATCH
+        - POST
+        - PUT
+      LambdaFunctionAssociations:
+        - EventType: viewer-request
+          LambdaFunctionARN: ${websiteDomain:redirectLambdaArn}
+      TargetOriginId: ${self:custom.cloudfrontOriginId}
+      ForwardedValues:
+        QueryString: 'false'
+        Cookies:
+          Forward: none
+      ViewerProtocolPolicy: redirect-to-https
+    DefaultRootObject: index.html
+    Enabled: 'true'
+    HttpVersion: 'http2'
+    Origins:
+      - DomainName: ${self:custom.bucketName}.s3.amazonaws.com
+        CustomOriginConfig:
+          HTTPPort: 80
+          HTTPSPort: 443
+          OriginProtocolPolicy: https-only
+        Id: ${self:custom.cloudfrontOriginId}
+    ViewerCertificate:
+      AcmCertificateArn: GET FROM AWS DASHBOARD (ACM)
+      MinimumProtocolVersion: 'TLSv1.2_2018'
+      SslSupportMethod: 'sni-only'

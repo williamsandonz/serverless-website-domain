@@ -1,0 +1,23 @@
+{
+  "name": "serverless-website-domain",
+  "version": "1.0.0",
+  "description": "A serverless plugin that creates Route 53 records that point to your Cloudfront hosted static website.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/williamsandonz/serverless-website-domain.git"
+  },
+  "author": "Sando IT LTD <www.sandoit.co.uk>",
+  "contributors": [
+    "William Sando <williamsandonz@gmail.com>"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/williamsandonz/serverless-website-domain/issues"
+  },
+  "homepage": "https://github.com/williamsandonz/serverless-website-domain#readme",
+  "dependencies": {
+    "aws-sdk": "^2.700.0",
+    "chalk": "^4.1.0"
+  }
+}
