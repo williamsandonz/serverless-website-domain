@@ -28,18 +28,18 @@ Add the plugin to your serverless.yml
 Add plugin configuration to serverless.yml
 
     custom:
-      myDomain: #Key not needed, just used as example.
-        withWWW: www.${self:custom.myDomain.withoutWWW}
+      domainComponents: #Key not needed, just used as example.
+        withWWW: www.${self:custom.domainComponents.withoutWWW}
         withoutWWW: yourdomain.com
       websiteDomain:
-        cloudfrontOutputKey: 'myCloudfrontDomainName'
-        domain: ${self:custom.myDomain.withWWW}
+        cloudfrontOutputKey: 'yourCloudfrontDomainName'
+        domain: ${self:custom.domainComponents.withWWW}
         hostedZoneId: Hosted zone ID of yourdomain.com
         redirectToWWW: true
     variablesResolutionMode: 20210219
     resources:
       Outputs:
-        myCloudfrontDomainName:
+        yourCloudfrontDomainName:
           Value:
             'Fn::GetAtt': [ CloudFrontDistribution, DomainName ]
       Resources
@@ -48,8 +48,8 @@ Add plugin configuration to serverless.yml
           Properties:
             DistributionConfig:
               Aliases:
-              - ${self:custom.myDomain.withWWW}
-              - ${self:custom.myDomain.withoutWWW}
+              - ${self:custom.domainComponents.withWWW}
+              - ${self:custom.domainComponents.withoutWWW}
               DefaultCacheBehavior:
                 LambdaFunctionAssociations:
                   - EventType: viewer-request

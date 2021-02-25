@@ -1,0 +1,51 @@
+app: myapp
+custom:
+  bucketName: ${self:custom.name}
+  cloudfrontOriginId: ${self:custom.name}-cloud-front
+  cloudfrontInvalidate:
+    - distributionIdKey: 'cloudFrontDistributionId'
+      items:
+        - "/index.html"
+  customCertificate:
+    certificateName: ${self:custom.domainComponents.withWWW}
+    hostedZoneNames: yourdomain.com.
+    subjectAlternativeNames:
+      - '${self:custom.domainComponents.withoutWWW}'
+  domainComponents:
+    withWWW: www.${self:custom.domainComponents.withoutWWW}
+    withoutWWW: ${env:SERVERLESS_STAGE}.yourdomain.com
+  name: ${self:app}-${self:provider.stage}-${self:service}
+  s3Sync:
+    - bucketName: ${self:custom.bucketName}
+      localDir: ./dist
+  websiteDomain:
+    redirectToWWW: true
+    domain: ${self:custom.domainComponents.withWWW}
+    cloudfrontOutputKey: 'cloudFrontDomainName'
+    hostedZoneId: GET FROM YOUR AWS DASHBOARD
+org: myorg
+plugins:
+  - serverless-s3-sync
+  - serverless-cloudfront-invalidate
+  - serverless-certificate-creator
+  - serverless-website-domain
+provider:
+  name: aws
+  region: ${env:AWS_REGION}
+  runtime: nodejs12.x
+  stackName: ${self:custom.name}
+  stage: ${env:SERVERLESS_STAGE}
+resources:
+  Outputs:
+    cloudFrontDistributionId:
+      Value:
+        Ref: CloudFrontDistribution
+    cloudFrontDomainName:
+      Value:
+        'Fn::GetAtt': [ CloudFrontDistribution, DomainName ]
+  Resources:
+    Bucket: ${file(./serverless-resources/S3Bucket.yml)}
+    BucketPolicy: ${file(./serverless-resources/S3BucketPolicy.yml)}
+    CloudFrontDistribution: ${file(./serverless-resources/CloudfrontDistribution.yml)}
+service: myservice
+variablesResolutionMode: 20210219
