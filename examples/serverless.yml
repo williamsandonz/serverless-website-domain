@@ -22,7 +22,6 @@ custom:
     redirectToWWW: true
     domain: ${self:custom.domainComponents.withWWW}
     cloudfrontOutputKey: 'cloudFrontDomainName'
-    hostedZoneId: GET FROM YOUR AWS DASHBOARD
 org: myorg
 plugins:
   - serverless-s3-sync

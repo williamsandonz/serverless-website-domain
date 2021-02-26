@@ -1,6 +1,6 @@
 {
   "name": "serverless-website-domain",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A serverless plugin that creates Route 53 records that point to your Cloudfront hosted static website.",
   "main": "index.js",
   "repository": {

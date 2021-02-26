@@ -33,8 +33,7 @@ Add plugin configuration to serverless.yml
         withoutWWW: yourdomain.com
       websiteDomain:
         cloudfrontOutputKey: 'yourCloudfrontDomainName'
-        domain: ${self:custom.domainComponents.withWWW}
-        hostedZoneId: Hosted zone ID of yourdomain.com
+        domain: ${self:custom.domainComponents.withWWW} #must be hostedZoneDomain or subdomain of it
         redirectToWWW: true
     variablesResolutionMode: 20210219
     resources:
@@ -94,5 +93,4 @@ If you are using alongside serverless-certificate-creator you should call `serve
 |---------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | cloudfrontOutputKey |     Y    |   String  |         | Should match key in resource.outputs which contains Cloudfront domain name (e.g 'Fn::GetAtt': [ CloudFrontDistribution, DomainName ]).                                            |
 | domain              |     Y    |   String  |         | The domain you want to create. (e.g sub.yourdomain.com or yourdomain.com). Must exist under hosted zone of hostedZoneId.                                                          |
-| hostedZoneId        |     Y    |   String  |         | The ID of your Hosted zone as listed in the Route 53 page in AWS console. NB if domain = sub.yourdomain.com or yourdomain.com the name of your hosted zone must be yourdomain.com |
 | redirectToWWW          |     N    |  Boolean  | False   | Set to true if you want non-www version of your domain redirected to the www version of your domain. (This creates a Lambda@Edge function and attaches it to your Cloudfront domain)
