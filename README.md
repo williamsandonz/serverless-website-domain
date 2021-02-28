@@ -13,7 +13,8 @@ Features:
 
 ## Prerequisites
 
-This plugin requires that you use at least serverless version 2.27.0 because it relies on the new variable resolution system introduced in this PR [here](https://github.com/serverless/serverless/pull/8987/files). You must also add 'variablesResolutionMode: 20210219' at the root of serverless.yml file, this will be removed once serverless v3 is released.
+This plugin requires that you use at least serverless version 2.27.0 because it relies on the new variable resolution system introduced in this PR [here](https://github.com/serverless/serverless/pull/8987/files). You must also add 'variablesResolutionMode: 20210219' at the root of serverless.yml file, this will be removed once serverless v3 is released. If you are using alongside serverless-certificate-creator
+you must use version >= 1.5.0 so that it supports the new variable reoslution mode as well.
 
 Before running you must manually create a Hosted Zone in Route 53. with domain name yourdomain.com
 
@@ -55,9 +56,7 @@ Add plugin configuration to serverless.yml
                     LambdaFunctionARN: ${websiteDomain:redirectLambdaArn}
               ViewerCertificate:
                 #manually specify ARN:
-                AcmCertificateArn: 'arn_of_your_certificate'  (See note #1 below)
-
-If you are using this plugin in combination with serverless-certificate-creator, you could usually reference the ARN of your certificate dynamicallly with `${certificate:${self:custom.customCertificate.certificateName}:CertificateArn}`. However this isn't currently supported by the new variable resolution system so you must enter it manually for now. Future updates will address this problem, stay tuned.
+                AcmCertificateArn: ${certificate:${self:custom.customCertificate.certificateName}.CertificateArn}
 
 ## How to run
 
@@ -65,12 +64,14 @@ To create the domain
 
 ```
 serverless createRedirect #If you are using redirectToWWW
-serverless createDomain
+serverless deploy #Called in after:deploy hook
 ```
-To remove the domain
+There are also other manual commands you can run:
 
 ```
 serverless removeDomain
+serverless createDomain
+serverless removeRedirect
 ```
 
 `createDomain` will also be called automatically by `serverless deploy` during the after:deploy hook. The recommended approach is to not use 'createDomain' and instead let it run automatically during deploy as it is dependent on the Cloudfront distribution first being deployed.
