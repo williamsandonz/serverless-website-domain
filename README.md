@@ -67,7 +67,7 @@ Add plugin configuration to serverless.yml
 To create the domain
 
 ```
-serverless createRedirect #If you are using redirectToWWW
+serverless create-edge-lambda #If you are using custom.websiteDomain.edgeLambda
 serverless deploy #Called in after:deploy hook
 ```
 There are also other manual commands you can run:
@@ -75,7 +75,7 @@ There are also other manual commands you can run:
 ```
 serverless remove-domain
 serverless create-domain
-serverless remove-redirect
+serverless remove-edge-lambda
 ```
 
 `create-domain` will also be called automatically by `serverless deploy` during the after:deploy hook. The recommended approach is to not use 'createDomain' and instead let it run automatically during deploy as it is dependent on the Cloudfront distribution first being deployed.
@@ -100,4 +100,4 @@ If you are using alongside serverless-certificate-creator you should call `serve
 | domain              |     Y    |   String  |         | The domain you want to create. (e.g sub.yourdomain.com or yourdomain.com). Must exist under hosted zone of hostedZoneId.                                                          |
 | edgeLambda          |     N    |  Object  | NULL   | Parent property                                                          |
 | basicAuthCredentials          |     N    |  String  | NULL   | Specify to guard website with basic auth. Separate username & password with '/'/                                                          |
-| redirect          |     N    |  Object  | NULL   | Specify 'from' and 'to' to create a redirect. 'from' will be matched against lambda request.host[0] & a route 53 A & AAAA record will also be created for it. 'to' is simply the destination of the redirect. Neither of these properties should contain 'http'/'https'.                                                     |
+| redirect          |     N    |  Object  | NULL   | Specify 'from' and 'to' to create a redirect. 'from' will be matched against lambda request.host[0]. It will also create a route 53 A & AAAA record for it. 'to' is simply the destination of the redirect. Neither of these properties should contain 'http'/'https'.                                                     |
