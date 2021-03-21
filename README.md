@@ -36,10 +36,10 @@ Add plugin configuration to serverless.yml
         cloudfrontOutputKey: 'yourCloudfrontDomainName'
         domain: ${self:custom.domainComponents.withWWW} #must be hostedZoneDomain or subdomain of it
         edgeLambda:
-          basicAuthCredentials: ${env:BASIC_AUTH_USERNAME}/${env:BASIC_AUTH_PASSWORD}
+          basicAuthCredentials: ${env:BASIC_AUTH_CREDENTIALS}
           redirect:
             from: ${self:custom.domainComponents.withoutWWW}
-            to: ${self:custom.domainComponents.withWWW}
+            to: https://${self:custom.domainComponents.withWWW}
     variablesResolutionMode: 20210219
     resources:
       Outputs:

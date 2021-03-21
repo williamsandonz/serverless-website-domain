@@ -22,7 +22,7 @@ custom:
     cloudfrontOutputKey: 'cloudFrontDomainName'
     domain: ${self:custom.domainComponents.withWWW}
     edgeLambda:
-      basicAuthCredentials: ${env:BASIC_AUTH_USERNAME}/${env:BASIC_AUTH_PASSWORD}
+      basicAuthCredentials: ${env:BASIC_AUTH_CREDENTIALS}
       redirect:
         from: ${self:custom.domainComponents.withoutWWW}
         to: ${self:custom.domainComponents.withWWW}
