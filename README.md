@@ -35,7 +35,11 @@ Add plugin configuration to serverless.yml
       websiteDomain:
         cloudfrontOutputKey: 'yourCloudfrontDomainName'
         domain: ${self:custom.domainComponents.withWWW} #must be hostedZoneDomain or subdomain of it
-        redirectToWWW: true
+        edgeLambda:
+          basicAuthCredentials: ${env:BASIC_AUTH_USERNAME}/${env:BASIC_AUTH_PASSWORD}
+          redirect:
+            from: ${self:custom.domainComponents.withoutWWW}
+            to: ${self:custom.domainComponents.withWWW}
     variablesResolutionMode: 20210219
     resources:
       Outputs:
@@ -53,7 +57,7 @@ Add plugin configuration to serverless.yml
               DefaultCacheBehavior:
                 LambdaFunctionAssociations:
                   - EventType: viewer-request
-                    LambdaFunctionARN: ${websiteDomain:redirectLambdaArn}
+                    LambdaFunctionARN: ${websiteDomain:edgeLambdaArn}
               ViewerCertificate:
                 #manually specify ARN:
                 AcmCertificateArn: ${certificate:${self:custom.customCertificate.certificateName}.CertificateArn}
@@ -69,14 +73,14 @@ serverless deploy #Called in after:deploy hook
 There are also other manual commands you can run:
 
 ```
-serverless removeDomain
-serverless createDomain
-serverless removeRedirect
+serverless remove-domain
+serverless create-domain
+serverless remove-redirect
 ```
 
-`createDomain` will also be called automatically by `serverless deploy` during the after:deploy hook. The recommended approach is to not use 'createDomain' and instead let it run automatically during deploy as it is dependent on the Cloudfront distribution first being deployed.
+`create-domain` will also be called automatically by `serverless deploy` during the after:deploy hook. The recommended approach is to not use 'createDomain' and instead let it run automatically during deploy as it is dependent on the Cloudfront distribution first being deployed.
 
-If you are using alongside serverless-certificate-creator you should call `serverless create-cert` before `serverless createRedirect`. You must also ensure that you include both www & non-www variants in subjectAlternativeNames. E.G:
+If you are using alongside serverless-certificate-creator you should call `serverless create-cert` before `serverless create-redirect`. You must also ensure that you include both www & non-www variants in subjectAlternativeNames. E.G:
 
     customCertificate:
       certificateName: ${self:custom.domainComponents.withWWW}
@@ -94,4 +98,6 @@ If you are using alongside serverless-certificate-creator you should call `serve
 |---------------------|----------|-----------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | cloudfrontOutputKey |     Y    |   String  |         | Should match key in resource.outputs which contains Cloudfront domain name (e.g 'Fn::GetAtt': [ CloudFrontDistribution, DomainName ]).                                            |
 | domain              |     Y    |   String  |         | The domain you want to create. (e.g sub.yourdomain.com or yourdomain.com). Must exist under hosted zone of hostedZoneId.                                                          |
-| redirectToWWW          |     N    |  Boolean  | False   | Set to true if you want non-www version of your domain redirected to the www version of your domain. (This creates a Lambda@Edge function and attaches it to your Cloudfront domain)
+| edgeLambda          |     N    |  Object  | NULL   | Parent property                                                          |
+| basicAuthCredentials          |     N    |  String  | NULL   | Specify to guard website with basic auth. Separate username & password with '/'/                                                          |
+| redirect          |     N    |  Object  | NULL   | Specify 'from' and 'to' to create a redirect. 'from' will be matched against lambda request.host[0] & a route 53 A & AAAA record will also be created for it. 'to' is simply the destination of the redirect. Neither of these properties should contain 'http'/'https'.                                                     |

@@ -10,25 +10,25 @@ class WebsiteDomain {
     this.options = options;
 
     this.commands = {
-      createDomain: {
+      'create-domain': {
         usage: 'Creates Route 53 records that point to a Cloudfront distribution',
         lifecycleEvents: [
           'create',
         ],
       },
-      createRedirect: {
+      'create-edge-lambda': {
         usage: 'Creates IAM Role & Lambda@Edge Function that will be attached to Cloudfront',
         lifecycleEvents: [
           'create',
         ],
       },
-      removeDomain: {
+      'remove-domain': {
         usage: 'Remove Route 53 records that point to a Cloudfront distribution',
         lifecycleEvents: [
           'remove',
         ],
       },
-      removeRedirect: {
+      'remove-edge-lambda': {
         usage: 'Remove IAM Role & Lambda@Edge Function that are attached to Cloudfront',
         lifecycleEvents: [
           'remove',
@@ -37,31 +37,30 @@ class WebsiteDomain {
     };
 
     this.hooks = {
-      'before:deploy:deploy': this.hookWrapper.bind(this, this.onCreateRedirect),
       'after:deploy:deploy': this.hookWrapper.bind(this, this.onCreateDomain),
       'before:remove:remove': this.hookWrapper.bind(this, this.onRemoveDomain),
-      'createDomain:create': this.hookWrapper.bind(this, this.onCreateDomain),
-      'createRedirect:create': this.hookWrapper.bind(this, this.onCreateRedirect),
-      'removeDomain:remove': this.hookWrapper.bind(this, this.onRemoveDomain),
-      'removeRedirect:remove': this.hookWrapper.bind(this, this.onRemoveRedirect),
+      'create-domain:create': this.hookWrapper.bind(this, this.onCreateDomain),
+      'create-edge-lambda:create': this.hookWrapper.bind(this, this.onCreateEdgeLambda),
+      'remove-domain:remove': this.hookWrapper.bind(this, this.onRemoveDomain),
+      'remove-edge-lambda:remove': this.hookWrapper.bind(this, this.onRemoveEdgeLambda),
     };
 
     this.variableResolvers = {
       websiteDomain: {
         resolver: (path) => {
           const key = path.split(':')[1];
-          if(key === 'redirectLambdaArn') {
+          if(key === 'edgeLambdaArn') {
             return new Promise(async (resolve, reject) => {
               this.initialise();
               const cliCommands = this.serverless.pluginManager.cliCommands;
               if(
-                this.config.redirectToWWW &&
-                (cliCommands[0] === 'deploy' || cliCommands[0] === 'createDomain' || cliCommands[0] === 'removeRedirect')
+                this.config.edgeLambda && this.config.edgeLambda.redirect &&
+                (cliCommands[0] === 'deploy' || cliCommands[0] === 'createDomain' || cliCommands[0] === 'remove-edge-lambda')
               ) {
                 console.log(chalk.blueBright('Finding redirect lambda to attach to Cloudfront...'));
-                const response = await this.helper.getRedirectLambdaVersions();
+                const response = await this.helper.getEdgeLambdaVersions();
                 if(!response.Versions[1]) {
-                  throw 'Could not find redirect lambda version';
+                  throw 'Could not find edge lambda version';
                 }
                 resolve(`${response.Versions[1].FunctionArn}`);
               }
@@ -128,11 +127,12 @@ class WebsiteDomain {
       cloudfrontDomainName
     );
   }
-  async onCreateRedirect() {
-    await this.helper.createRedirect();
+  async onCreateEdgeLambda() {
+    await this.helper.compileLambdaZipFile();
+    await this.helper.createEdgeLambda();
   }
-  async onRemoveRedirect() {
-    await this.helper.deleteRedirect();
+  async onRemoveEdgeLambda() {
+    await this.helper.removeEdgeLambda();
   }
 }
 

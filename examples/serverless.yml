@@ -19,9 +19,13 @@ custom:
     - bucketName: ${self:custom.bucketName}
       localDir: ./dist
   websiteDomain:
-    redirectToWWW: true
-    domain: ${self:custom.domainComponents.withWWW}
     cloudfrontOutputKey: 'cloudFrontDomainName'
+    domain: ${self:custom.domainComponents.withWWW}
+    edgeLambda:
+      basicAuthCredentials: ${env:BASIC_AUTH_USERNAME}/${env:BASIC_AUTH_PASSWORD}
+      redirect:
+        from: ${self:custom.domainComponents.withoutWWW}
+        to: ${self:custom.domainComponents.withWWW}
 org: myorg
 plugins:
   - serverless-s3-sync

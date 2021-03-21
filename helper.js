@@ -1,6 +1,9 @@
 const AWS = require('aws-sdk');
 const chalk = require('chalk');
 const fs = require('fs');
+const JSZip = require('jszip');
+
+const edgeZipPath = '/edge-handler.zip';
 
 class WebsiteDomainHelper {
   constructor(serverless, config) {
@@ -12,7 +15,7 @@ class WebsiteDomainHelper {
     this.apigatewayV2 = new this.serverless.providers.aws.sdk.ApiGatewayV2(credentials);
     this.route53 = new this.awsProvider.sdk.Route53(credentials);
     this.cfn = new AWS.CloudFormation(credentials);
-    if(this.config.redirectToWWW) {
+    if(this.config.edgeLambda) {
       this.lambda = new this.awsProvider.sdk.Lambda({
         ...credentials,
         region: 'us-east-1'
@@ -23,8 +26,8 @@ class WebsiteDomainHelper {
   getStackName() {
     return this.awsProvider.naming.getStackName();
   }
-  getRedirectName() {
-    return `${this.getStackName()}-redirect`;
+  getEdgeLambdaName() {
+    return `${this.getStackName()}-website-domain`;
   }
   async getCloudfrontDomainName() {
     return new Promise((resolve, reject) => {
@@ -82,9 +85,6 @@ class WebsiteDomainHelper {
       }
     }
   }
-  getDomainWithoutWWW() {
-    return this.config.domain.replace('www.', '');
-  }
   async updateDnsRecords(
     action,
     cloudfrontDomainName
@@ -98,10 +98,10 @@ class WebsiteDomainHelper {
       { type: 'A', name: domain },
       { type: 'AAAA', name: domain }
     ];
-    if (this.config.redirectToWWW) {
+    if (this.config.edgeLambda && this.config.edgeLambda.redirect) {
       records.push(
-        { type: 'A', name: this.getDomainWithoutWWW() },
-        { type: 'AAAA', name: this.getDomainWithoutWWW() }
+        { type: 'A', name: this.config.edgeLambda.redirect.from },
+        { type: 'AAAA', name: this.config.edgeLambda.redirect.from }
       );
     }
     const Changes = records.map((record) => {
@@ -182,19 +182,20 @@ class WebsiteDomainHelper {
   }
   async doDomainsExist() {
     try {
+      const redirectDisabled = !this.config.edgeLambda || (this.config.edgeLambda && !this.config.redirect);
       const result = await this._throttledCall(this.route53, 'listResourceRecordSets', {
         HostedZoneId: 'Z08994122JHUO1LNKW3WZ'
       });
       const matches = result.ResourceRecordSets.filter((record) => {
         const domainMatch = record.Name === `${this.config.domain}.`;
         const typeMatch = record.Type === 'A' || record.Type === 'AAAA';
-        if(!this.config.redirectToWWW) {
+        if(redirectDisabled) {
           return domainMatch && typeMatch;
         } else {
-          return (domainMatch || record.Name === `${this.getDomainWithoutWWW()}.`) && typeMatch;
+          return (domainMatch || record.Name === `${this.config.edgeLambda.redirect.from}.`) && typeMatch;
         }
       });
-      return !this.config.redirectToWWW ?
+      return redirectDisabled ?
         matches.length === 2:
         matches.length === 4;
     } catch (err) {
@@ -205,26 +206,26 @@ class WebsiteDomainHelper {
     }
   }
 
-  async getRedirectLambdaVersions() {
+  async getEdgeLambdaVersions() {
     console.log(chalk.blueBright('serverless-website-domain initialising...'));
     return new Promise((resolve, reject) => {
       this.lambda.listVersionsByFunction({
-        FunctionName: this.getRedirectName(),
+        FunctionName: this.getEdgeLambdaName(),
       }, (err, data) => {
         if(err) {
           console.error(err);
           // TODO below add lambda name to log
-          return reject(`Cannot find Lambda redirect in us-east-1. Ensure you have run 'createRedirect' before running this command.`);
+          return reject(`Cannot find edge lambda in us-east-1. Ensure you have run 'create-edge-lambda' before running this command.`);
         }
         resolve(data);
       });
     });
   }
 
-  async _getRedirectFunction() {
+  async _getEdgeLambdaFn() {
     return new Promise((resolve, reject) => {
       this.lambda.getFunction({
-        FunctionName: this.getRedirectName(),
+        FunctionName: this.getEdgeLambdaName(),
       }, (err, data) => {
         if (err) {
           resolve(false);
@@ -235,10 +236,10 @@ class WebsiteDomainHelper {
     });
   }
 
-  async _deleteRedirectFunction() {
+  async _deleteEdgeLambdaFn() {
     return new Promise((resolve, reject) => {
       this.lambda.deleteFunction({
-        FunctionName: this.getRedirectName(),
+        FunctionName: this.getEdgeLambdaName(),
       }, (err, data) => {
         if (err) {
           reject(err);
@@ -249,10 +250,10 @@ class WebsiteDomainHelper {
     });
   }
 
-  async _getRedirectRole() {
+  async _getEdgeLambdaRole() {
     return new Promise((resolve, reject) => {
       this.iam.getRole({
-        RoleName: this.getRedirectName()
+        RoleName: this.getEdgeLambdaName()
       }, (err, data) => {
         if (err) {
           resolve(false);
@@ -263,10 +264,10 @@ class WebsiteDomainHelper {
     });
   }
 
-  async _deleteRedirectRole() {
+  async _removeEdgeLambdaRole() {
     return new Promise((resolve, reject) => {
       this.iam.deleteRole({
-        RoleName: this.getRedirectName()
+        RoleName: this.getEdgeLambdaName()
       }, (err, data) => {
         if (err) {
           reject(err);
@@ -277,17 +278,17 @@ class WebsiteDomainHelper {
     });
   }
 
-  async removeRedirectRedirect() {
-    console.log(chalk.blueBright(`Attempting to delete Redirect lambda...`));
-    const fnData = await this._getRedirectFunction();
+  async removeEdgeLambda() {
+    console.log(chalk.blueBright(`Attempting to delete edge lambda...`));
+    const fnData = await this._getEdgeLambdaFn();
     if(!fnData) {
       console.log(chalk.greenBright(`Lambda doesn't exist, skipping.`));
     } else {
-      const result = await this._deleteRedirectFunction().catch((e) => {
+      const result = await this._deleteEdgeLambdaFn().catch((e) => {
         console.error(e);
         // TODO dodgey message match here
         if(e.message.indexOf('replicated function') !== -1) {
-          throw 'Cannot delete redirect because your redirect lambda is still attached to your Cloudfront distribution. ' +
+          throw 'Cannot delete edge lambda because your it is still attached to your Cloudfront distribution. ' +
           'You must first dettach it from within the AWS console, then run this command again. ' +
           'Go to Cloudfront -> Edit distribution -> Behaviors -> Edit -> Scroll to \'Lambda Function Associations\' and remove it. '+
           'After doing so, you may need to wait for a period for AWS to become aware that it was dettatched.';
@@ -295,24 +296,24 @@ class WebsiteDomainHelper {
           throw e;
         }
       });
-      console.log(chalk.greenBright(`Redirect lambda has been succesfully deleted`));
+      console.log(chalk.greenBright(`Edge lambda lambda has been succesfully deleted`));
     }
-    console.log(chalk.blueBright(`Attempting to delete Redirect IAM role...`));
-    const roleData = await this._getRedirectRole();
+    console.log(chalk.blueBright(`Attempting to delete Edge lambda IAM role...`));
+    const roleData = await this._getEdgeLambdaRole();
     if(!roleData) {
       console.log(chalk.greenBright(`IAM Role doesn't exist, skipping.`));
     } else {
-      const result = await this._deleteRedirectRole().catch((e) => {
+      const result = await this._removeEdgeLambdaRole().catch((e) => {
         console.error(e);
-        console.log(chalk.redBright(`Failed to delete redirect IAM role`));
+        console.log(chalk.redBright(`Failed to delete edge lambda IAM role`));
       });
       if(result) {
-        console.log(chalk.greenBright(`Redirect IAM Role has been succesfully deleted`));
+        console.log(chalk.greenBright(`edge lambda IAM Role has been succesfully deleted`));
       }
     }
   }
 
-  async _createRedirectRole() {
+  async _createEdgeLambdaFnRole() {
     return new Promise((resolve, reject) => {
       console.log(chalk.blueBright(`Creating IAM Role...`));
       const roleParams = {
@@ -331,11 +332,11 @@ class WebsiteDomainHelper {
             }
           ]
         }),
-        RoleName: this.getRedirectName()
+        RoleName: this.getEdgeLambdaName()
       };
       const policyParams = {
         PolicyArn: 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole',
-        RoleName: this.getRedirectName()
+        RoleName: this.getEdgeLambdaName()
       };
       this.iam.createRole(roleParams, (err, createRoleData) => {
         if (err) {
@@ -349,7 +350,7 @@ class WebsiteDomainHelper {
             // setTimout unfortunately required here:
             // https://stackoverflow.com/questions/36419442/the-role-defined-for-the-function-cannot-be-assumed-by-lambda
             setTimeout(() => {
-              console.log(chalk.greenBright(`Attached successfully`));
+              console.log(chalk.greenBright(`IAM role policy attached successfully`));
               resolve(createRoleData);
             }, 15000);
           }
@@ -358,17 +359,17 @@ class WebsiteDomainHelper {
     });
   }
 
-  async _createRedirectLambda(roleData) {
+  async _createEdgeLambdaFn(roleData) {
     return new Promise((resolve, reject) => {
       const fnParams = {
         Code: {
-          ZipFile: fs.readFileSync(__dirname+'/redirect-lambda.zip')
+          ZipFile: fs.readFileSync(__dirname + edgeZipPath)
         },
-        FunctionName: this.getRedirectName(),
+        FunctionName: this.getEdgeLambdaName(),
         Handler: 'handler.main',
         Role: roleData.Role.Arn,
         Runtime: 'nodejs12.x',
-        Description: `Redirects requests to ${this.config.domain}`,
+        Description: `Edge lambda for serverless-website-domain`,
         Publish: true,
       };
       console.log(chalk.blueBright(`Creating lambda...`));
@@ -378,7 +379,7 @@ class WebsiteDomainHelper {
         }
         console.log(chalk.greenBright(`Lambda created successfully, creating lambda version...`));
         this.lambda.publishVersion({
-          FunctionName: this.getRedirectName()
+          FunctionName: this.getEdgeLambdaName()
         }, (err, data) => {
           if (err) {
             return reject(err);
@@ -390,35 +391,89 @@ class WebsiteDomainHelper {
     });
   }
 
-  async createRedirect() {
+  async compileLambdaZipFile() {
 
     return new Promise(async (resolve, reject) => {
 
       try {
 
-        const existingRole = await this._getRedirectRole();
-        let roleData;
+        let basicAuthEnabled = 'false';
+        let basicAuthUsername = '';
+        let basicAuthPassword = '';
 
-        if (!existingRole) {
-          roleData = await this._createRedirectRole();
-        } else {
-          roleData = await this._getRedirectRole();
-          console.log(chalk.greenBright(`Role already exists, skipping...`));
+        if (this.config.edgeLambda.basicAuthCredentials) {
+          const credentialsAsArray = this.config.edgeLambda.basicAuthCredentials.split('/');
+          if (credentialsAsArray.length !== 2) {
+            throw new Error('basicAuthCredentials must only contain 1 slash');
+          }
+          basicAuthUsername = credentialsAsArray[0];
+          basicAuthPassword = credentialsAsArray[1];
+          basicAuthEnabled = 'true';
         }
 
-        const fnData = await this._getRedirectFunction();
-        if(!fnData) {
-          console.log(chalk.blueBright(`Creating Lambda for ${this.getDomainWithoutWWW()} --> ${this.config.domain} redirect.`));
-          await this._createRedirectLambda(roleData);
-        } else {
-          console.log(chalk.greenBright(`Redirect lambda already exists, skipping...`));
+        let redirectEnabled = 'false';
+        let redirectFrom = '';
+        let redirectTo = '';
+
+        if (this.config.edgeLambda.redirect) {
+          redirectEnabled = 'true';
+          redirectFrom = this.config.edgeLambda.redirect.from;
+          redirectTo = this.config.edgeLambda.redirect.to;
         }
-        resolve(true);
+
+        const zip = new JSZip();
+        let handlerCode = fs.readFileSync(__dirname+'/handler.js').toString();
+
+        handlerCode = handlerCode.replace('[BASIC_AUTH_ENABLED]', basicAuthEnabled);
+        handlerCode = handlerCode.replace('[BASIC_AUTH_USERNAME]', basicAuthUsername);
+        handlerCode = handlerCode.replace('[BASIC_AUTH_PASSWORD]', basicAuthPassword);
+
+        handlerCode = handlerCode.replace('[REDIRECT_ENABLED]', redirectEnabled);
+        handlerCode = handlerCode.replace('[REDIRECT_FROM]', redirectFrom);
+        handlerCode = handlerCode.replace('[REDIRECT_TO]', redirectTo);
+
+        zip.file('handler.js', handlerCode);
+        zip
+          .generateNodeStream({ type:'nodebuffer', streamFiles:true })
+          .pipe(fs.createWriteStream(__dirname+'/'+edgeZipPath))
+          .on('finish', function () {
+            resolve(true);
+          })
+          .on('error', function () {
+            reject(true);
+          });
 
       } catch(e) {
         reject(e);
       }
 
+    });
+  }
+
+  async createEdgeLambda() {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const existingRole = await this._getEdgeLambdaRole();
+        let roleData;
+
+        if (!existingRole) {
+          roleData = await this._createEdgeLambdaFnRole();
+        } else {
+          roleData = await this._getEdgeLambdaRole();
+          console.log(chalk.greenBright(`Role already exists, skipping...`));
+        }
+
+        const fnData = await this._getEdgeLambdaFn();
+        if(!fnData) {
+          console.log(chalk.blueBright(`Creating serverless-website-domain edge lambda.`));
+          await this._createEdgeLambdaFn(roleData);
+        } else {
+          console.log(chalk.greenBright(`Edge lambda already exists, skipping...`));
+        }
+        resolve(true);
+      } catch(e) {
+        reject(e);
+      }
     });
   }
 }

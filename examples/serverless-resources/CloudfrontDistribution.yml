@@ -19,7 +19,7 @@ Properties:
         - PUT
       LambdaFunctionAssociations:
         - EventType: viewer-request
-          LambdaFunctionARN: ${websiteDomain:redirectLambdaArn}
+          LambdaFunctionARN: ${websiteDomain:edgeLambdaArn}
       TargetOriginId: ${self:custom.cloudfrontOriginId}
       ForwardedValues:
         QueryString: 'false'
