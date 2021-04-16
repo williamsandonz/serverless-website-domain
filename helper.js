@@ -401,7 +401,7 @@ class WebsiteDomainHelper {
         let basicAuthUsername = '';
         let basicAuthPassword = '';
 
-        if (this.config.edgeLambda.basicAuthCredentials) {
+        if (this.config.edgeLambda.basicAuthCredentials && this.config.edgeLambda.basicAuthCredentials !== 'false') {
           const credentialsAsArray = this.config.edgeLambda.basicAuthCredentials.split('/');
           if (credentialsAsArray.length !== 2) {
             throw new Error('basicAuthCredentials must only contain 1 slash');

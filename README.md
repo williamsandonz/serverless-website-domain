@@ -36,7 +36,7 @@ Add plugin configuration to serverless.yml
         cloudfrontOutputKey: 'yourCloudfrontDomainName'
         domain: ${self:custom.domainComponents.withWWW} #must be hostedZoneDomain or subdomain of it
         edgeLambda:
-          basicAuthCredentials: ${env:BASIC_AUTH_CREDENTIALS}
+          basicAuthCredentials: ${env:BASIC_AUTH_CREDENTIALS} #e.g user/password
           redirect:
             from: ${self:custom.domainComponents.withoutWWW}
             to: https://${self:custom.domainComponents.withWWW}
@@ -99,7 +99,7 @@ If you are using alongside serverless-certificate-creator you should call `serve
 | cloudfrontOutputKey |     Y    |   String  |         | Should match key in resource.outputs which contains Cloudfront domain name (e.g 'Fn::GetAtt': [ CloudFrontDistribution, DomainName ]).                                            |
 | domain              |     Y    |   String  |         | The domain you want to create. (e.g sub.yourdomain.com or yourdomain.com). Must exist under hosted zone of hostedZoneId.                                                          |
 | edgeLambda          |     N    |  Object  | NULL   | Parent property                                                          |
-| basicAuthCredentials          |     N    |  String  | NULL   | Specify to guard website with basic auth. Separate username & password with '/' or use empty string to disable.                                                       |
+| basicAuthCredentials          |     N    |  String  | NULL   | Specify to guard website with basic auth. Separate username & password with '/' or use 'false' to disable.                                                       |
 | redirect          |     N    |  Object  | NULL   | Parent property.                                                     |
 | redirect.from          |     Y    |  Object  | NULL   | Required if .redirect set. 'It will be matched against lambda request.host[0]. It will also create a route 53 A & AAAA record for it. If you want to redirect from yourdomain.com to www.yourdomain.com just enter 'yourdomain.com' here.                                                     |
 | redirect.to          |     Y    |  Object  | NULL   | Required if .redirect set. It is the full destination URL including protocol. (E.G https://www.yourdomain.com)   .                                                  |
