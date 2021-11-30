@@ -183,8 +183,9 @@ class WebsiteDomainHelper {
   async doDomainsExist() {
     try {
       const redirectDisabled = !this.config.edgeLambda || (this.config.edgeLambda && !this.config.redirect);
+      const route53HostedZoneId = await this._getRoute53HostedZoneId();
       const result = await this._throttledCall(this.route53, 'listResourceRecordSets', {
-        HostedZoneId: 'Z08994122JHUO1LNKW3WZ'
+        HostedZoneId: route53HostedZoneId
       });
       const matches = result.ResourceRecordSets.filter((record) => {
         const domainMatch = record.Name === `${this.config.domain}.`;
