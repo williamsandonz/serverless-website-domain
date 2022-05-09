@@ -109,6 +109,7 @@ class WebsiteDomain {
     }
   }
   async onRemoveDomain() {
+    if (this.config.disabled) return;
     const cloudfrontDomainName = await this.helper.getCloudfrontDomainName();
     await this.helper.updateDnsRecords(
       `DELETE`,
@@ -116,6 +117,7 @@ class WebsiteDomain {
     );
   }
   async onCreateDomain() {
+    if (this.config.disabled) return;
     const cloudfrontDomainName = await this.helper.getCloudfrontDomainName();
     const domainsExist = await this.helper.doDomainsExist();
     if(domainsExist) {
