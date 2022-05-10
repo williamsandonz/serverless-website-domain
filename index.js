@@ -80,6 +80,7 @@ class WebsiteDomain {
     this.config = {
       ...custom.websiteDomain
     };
+    this.config.disabled = ['y','yes','true'].includes(this.config.disabled.toLowerCase());
     this.validateInput();
     this.helper = new WebsiteDomainHelper(
       this.serverless,
