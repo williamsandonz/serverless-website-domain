@@ -80,6 +80,7 @@ class WebsiteDomain {
     this.config = {
       ...custom.websiteDomain
     };
+    this.config.disabled = this.config.disabled && ['y','yes','true'].includes(String(this.config.disabled).toLowerCase());
     this.validateInput();
     this.helper = new WebsiteDomainHelper(
       this.serverless,
@@ -109,6 +110,7 @@ class WebsiteDomain {
     }
   }
   async onRemoveDomain() {
+    if (this.config.disabled) return;
     const cloudfrontDomainName = await this.helper.getCloudfrontDomainName();
     await this.helper.updateDnsRecords(
       `DELETE`,
@@ -116,6 +118,7 @@ class WebsiteDomain {
     );
   }
   async onCreateDomain() {
+    if (this.config.disabled) return;
     const cloudfrontDomainName = await this.helper.getCloudfrontDomainName();
     const domainsExist = await this.helper.doDomainsExist();
     if(domainsExist) {

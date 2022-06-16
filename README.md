@@ -33,6 +33,7 @@ Add plugin configuration to serverless.yml
         withWWW: www.${self:custom.domainComponents.withoutWWW}
         withoutWWW: yourdomain.com
       websiteDomain:
+        disabled: false # defaults to false. enable to prevent DNS changes if needed (e.g. per env)
         cloudfrontOutputKey: 'yourCloudfrontDomainName'
         domain: ${self:custom.domainComponents.withWWW} #must be hostedZoneDomain or subdomain of it
         edgeLambda:
