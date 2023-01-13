@@ -13,8 +13,7 @@ Features:
 
 ## Prerequisites
 
-This plugin requires that you use at least serverless version 2.27.0 because it relies on the new variable resolution system introduced in this PR [here](https://github.com/serverless/serverless/pull/8987/files). You must also add 'variablesResolutionMode: 20210219' at the root of serverless.yml file, this will be removed once serverless v3 is released. If you are using alongside serverless-certificate-creator
-you must use version >= 1.5.0 so that it supports the new variable reoslution mode as well.
+This plugin requires that you use at serverless v3 as it relies on variableResolutionMode 20210326
 
 Before running you must manually create a Hosted Zone in Route 53. with domain name yourdomain.com
 
