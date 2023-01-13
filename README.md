@@ -41,7 +41,7 @@ Add plugin configuration to serverless.yml
           redirect:
             from: ${self:custom.domainComponents.withoutWWW}
             to: https://${self:custom.domainComponents.withWWW}
-    variablesResolutionMode: 20210219
+    variablesResolutionMode: 20210326
     resources:
       Outputs:
         yourCloudfrontDomainName:
@@ -58,10 +58,10 @@ Add plugin configuration to serverless.yml
               DefaultCacheBehavior:
                 LambdaFunctionAssociations:
                   - EventType: viewer-request
-                    LambdaFunctionARN: ${websiteDomain:edgeLambdaArn}
+                    LambdaFunctionARN: ${websiteDomain(edgeLambdaArn)}
               ViewerCertificate:
                 #manually specify ARN:
-                AcmCertificateArn: ${certificate:${self:custom.customCertificate.certificateName}.CertificateArn}
+                AcmCertificateArn: ${certificate(${self:custom.customCertificate.certificateName}):CertificateArn}
 
 ## How to run
 

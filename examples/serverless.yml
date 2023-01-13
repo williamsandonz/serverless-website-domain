@@ -51,4 +51,4 @@ resources:
     BucketPolicy: ${file(./serverless-resources/S3BucketPolicy.yml)}
     CloudFrontDistribution: ${file(./serverless-resources/CloudfrontDistribution.yml)}
 service: myservice
-variablesResolutionMode: 20210219
+variablesResolutionMode: 20210326

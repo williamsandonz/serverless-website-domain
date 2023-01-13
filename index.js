@@ -45,31 +45,11 @@ class WebsiteDomain {
       'remove-edge-lambda:remove': this.hookWrapper.bind(this, this.onRemoveEdgeLambda),
     };
 
-    this.variableResolvers = {
+    this.configurationVariablesSources = {
       websiteDomain: {
-        resolver: (path) => {
-          const key = path.split(':')[1];
-          if(key === 'edgeLambdaArn') {
-            return new Promise(async (resolve, reject) => {
-              this.initialise();
-              const cliCommands = this.serverless.pluginManager.cliCommands;
-              if(
-                this.config.edgeLambda && this.config.edgeLambda.redirect &&
-                (cliCommands[0] === 'deploy' || cliCommands[0] === 'createDomain' || cliCommands[0] === 'remove-edge-lambda')
-              ) {
-                console.log(chalk.blueBright('Finding redirect lambda to attach to Cloudfront...'));
-                const response = await this.helper.getEdgeLambdaVersions();
-                if(!response.Versions[1]) {
-                  throw 'Could not find edge lambda version';
-                }
-                resolve(`${response.Versions[1].FunctionArn}`);
-              }
-              resolve(null);
-            });
-          }
-          throw 'Variable resolver path not implemented';
-        },
-        isDisabledAtPrepopulation: false,
+        resolve: this.getWebsiteDomainProperty.bind(this),
+        isDisabledAtPrepopulation: true,
+        serviceName: 'serverless-website-domain depends on AWS credentials.'
       }
     };
 
@@ -136,6 +116,32 @@ class WebsiteDomain {
   }
   async onRemoveEdgeLambda() {
     await this.helper.removeEdgeLambda();
+  }
+
+  async getWebsiteDomainProperty({address, params}) {
+    const property = address;
+    const key = params[0];
+    this.initialise();
+    if (key !== 'edgeLambdaArn') {
+      throw 'Property not supported'
+    }
+    return new Promise(async (resolve, reject) => {
+      this.initialise();
+      const cliCommands = this.serverless.pluginManager.cliCommands;
+      if(
+        this.config.edgeLambda && this.config.edgeLambda.redirect &&
+        (cliCommands[0] === 'deploy' || cliCommands[0] === 'createDomain' || cliCommands[0] === 'remove-edge-lambda')
+      ) {
+        console.log(chalk.blueBright('Finding redirect lambda to attach to Cloudfront...'));
+        const response = await this.helper.getEdgeLambdaVersions();
+        if(!response.Versions[1]) {
+          throw 'Could not find edge lambda version';
+        }
+        resolve({ value: `${response.Versions[1].FunctionArn}` });
+      }
+      resolve({ value: '' });
+    });
+
   }
 }
 
