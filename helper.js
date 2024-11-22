@@ -369,7 +369,7 @@ class WebsiteDomainHelper {
         FunctionName: this.getEdgeLambdaName(),
         Handler: 'handler.main',
         Role: roleData.Role.Arn,
-        Runtime: 'nodejs12.x',
+        Runtime: 'nodejs20.x',
         Description: `Edge lambda for serverless-website-domain`,
         Publish: true,
       };
